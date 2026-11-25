@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مغامرة ماريو الذهبية</title>
+    <!-- استيراد خط عربي مناسب للألعاب -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        /* تنسيقات عامة للصفحة */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 10px;
+            color: #fff;
+        }
+
+        /* الحاوية الرئيسية للعبة */
+        .game-wrapper {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* شريط المعلومات العلوي (النقاط، العملات، الأرواح، المرحلة) */
+        .hud-bar {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            border: 3px solid #ffd700;
+            border-radius: 16px;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+            font-weight: 900;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .hud-badge {
+            background: #222;
+            padding: 4px 12px;
+            border-radius: 10px;
+            border: 2px solid #555;
+            color: #ffd700;
+        }
+
+        .sound-btn {
+            background: linear-gradient(180deg, #ff9800, #e65100);
+            border: 2px solid #fff;
+            color: white;
+            border-radius: 12px;
+            padding: 6px 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #8d3200;
+            transition: transform 0.1s;
+        }
+
+        .sound-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #8d3200;
+        }
+
+        /* إطار شاشة اللعبة (Canvas) */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 62vh;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 4px solid #fff;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            background-color: #5c94fc;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* شاشات البداية والنهاية والفوز */
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .overlay-title {
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 4px 0 #b84a00, 0 8px 15px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+            animation: floatTitle 2s ease-in-out infinite;
+        }
+
+        @keyframes floatTitle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .overlay-subtitle {
+            font-size: clamp(0.95rem, 2vw, 1.2rem);
+            color: #f0f0f0;
+            max-width: 520px;
+            margin-bottom: 22px;
+            line-height: 1.6;
+        }
+
+        /* أزرار اللعب الرئيسية بتصميم ثلاثي الأبعاد جذاب */
+        .action-btn {
+            background: linear-gradient(180deg, #4caf50 0%, #2e7d32 100%);
+            color: #fff;
+            font-size: 1.3rem;
+            font-weight: 900;
+            padding: 12px 36px;
+            border: 3px solid #fff;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #1b5e20, 0 12px 20px rgba(0,0,0,0.5);
+            transition: all 0.1s ease;
+        }
+
+        .action-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #1b5e20;
+        }
+
+        /* أزرار التحكم باللمس أو الفأرة أسفل الشاشة */
+        .controls-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            gap: 15px;
+        }
+
+        .dpad-group {
+            display: flex;
+            gap: 14px;
+            direction: ltr; /* لترتيب اليسار واليمين بشكل طبيعي */
+        }
+
+        .ctrl-btn {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.9);
+            background: linear-gradient(180deg, #ff5252 0%, #c62828 100%);
+            color: white;
+            font-size: 1.7rem;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #7f0000, 0 8px 15px rgba(0, 0, 0, 0.4);
+            touch-action: manipulation;
+            transition: transform 0.05s;
+        }
+
+        .ctrl-btn.jump-btn {
+            width: 82px;
+            height: 68px;
+            border-radius: 34px;
+            background: linear-gradient(180deg, #ffca28 0%, #ff8f00 100%);
+            box-shadow: 0 6px 0 #b26a00, 0 8px 15px rgba(0, 0, 0, 0.4);
+            font-size: 1.2rem;
+            color: #222;
+        }
+
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #333;
+        }
+
+        .hint-text {
+            font-size: 0.85rem;
+            color: #d0e1ff;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .hud-bar {
+                padding: 8px 12px;
+            }
+            .hud-item {
+                font-size: 0.95rem;
+            }
+            .ctrl-btn {
+                width: 60px;
+                height: 60px;
+            }
+            .ctrl-btn.jump-btn {
+                width: 75px;
+                height: 60px;
+            }
+            .hint-text {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-wrapper">
+    <!-- شريط البيانات العلوي -->
+    <div class="hud-bar">
+        <div class="hud-item">
+            <span>❤️ الأرواح:</span>
+            <span id="livesDisplay" class="hud-badge">3</span>
+        </div>
+        <div class="hud-item">
+            <span>🪙 العملات:</span>
+            <span id="coinsDisplay" class="hud-badge">0</span>
+        </div>
+        <div class="hud-item">
+            <span>⭐ النقاط:</span>
+            <span id="scoreDisplay" class="hud-badge">0</span>
+        </div>
+        <div class="hud-item">
+            <span>🚩 المرحلة:</span>
+            <span id="levelDisplay" class="hud-badge">1</span>
+        </div>
+        <button id="soundToggleBtn" class="sound-btn" title="تفعيل أو كتم الصوت">🔊 الصوت</button>
+    </div>
+
+    <!-- حاوية اللعبة -->
+    <div class="canvas-container" id="canvasContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- شاشة البداية -->
+        <div id="startScreen" class="overlay-screen">
+            <h1 class="overlay-title">🍄 مغامرة ماريو الذهبية 🪙</h1>
+            <p class="overlay-subtitle">
+                اجمع العملات الذهبية اللامعة، واقفز فوق الأشرار الذين يجرون للقضاء عليهم، وحاول الوصول إلى علم النهاية!
+            </p>
+            <button id="startBtn" class="action-btn">ابدأ اللعب الآن ▶</button>
+        </div>
+
+        <!-- شاشة الخسارة -->
+        <div id="gameOverScreen" class="overlay-screen hidden">
+            <h1 class="overlay-title" style="color: #ff5252;">💥 انتهت اللعبة! 💥</h1>
+            <p id="finalScoreText" class="overlay-subtitle">لقد جمعت 0 نقطة و 0 عملة ذهبية.</p>
+            <button id="restartBtn" class="action-btn">إعادة المحاولة 🔄</button>
+        </div>
+
+        <!-- شاشة الفوز بالمرحلة -->
+        <div id="winScreen" class="overlay-screen hidden">
+            <h1 class="overlay-title" style="color: #69f0ae;">🏆 أحسنت! لقد فزت بالمرحلة! 🏆</h1>
+            <p id="winScoreText" class="overlay-subtitle">مجموع نقاطك الرائع: 0</p>
+            <button id="nextLevelBtn" class="action-btn">المرحلة التالية ⏭</button>
+        </div>
+    </div>
+
+    <!-- أزرار التحكم السفلية (خارج الـ Canvas) -->
+    <div class="controls-bar">
+        <div class="dpad-group">
+            <button id="btnLeft" class="ctrl-btn" aria-label="يسار">◀</button>
+            <button id="btnRight" class="ctrl-btn" aria-label="يمين">▶</button>
+        </div>
+
+        <div class="hint-text">
+            استخدم الأسهم ⬅️ ➡️ أو A / D للحركة، ومفتاح المسافة ␣ أو ⬆️ للقفز
+        </div>
+
+        <button id="btnJump" class="ctrl-btn jump-btn" aria-label="قفز">قفز ⬆️</button>
+    </div>
+</div>
+
+<script>
+/**
+ * محرك الصوت الرجعي (Web Audio API)
+ * يولد مؤثرات صوتية للقفز، جمع العملات، القضاء على الشرير، والفوز/الخسارة بدون ملفات خارجية
+ */
+class SoundFX {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    playTone(freq, endFreq, duration, type = 'square', volume = 0.12) {
+        if (this.muted) return;
+        try {
+            this.init();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            if (endFreq) {
+                osc.frequency.exponentialRampToValueAtTime(endFreq, this.ctx.currentTime + duration);
+            }
+            gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+            // تجاهل أخطاء الصوت في حال عدم تفاعل المستخدم بعد
+        }
+    }
+
+    jump() {
+        this.playTone(220, 580, 0.22, 'square', 0.1);
+    }
+
+    coin() {
+        this.playTone(987, 1318, 0.18, 'sine', 0.15);
+        setTimeout(() => this.playTone(1318, 1568, 0.2, 'sine', 0.15), 70);
+    }
+
+    stomp() {
+        this.playTone(300, 90, 0.18, 'sawtooth', 0.15);
+    }
+
+    hurt() {
+        this.playTone(320, 100, 0.35, 'sawtooth', 0.18);
+    }
+
+    win() {
+        const notes = [523, 659, 783, 1046];
+        notes.forEach((n, idx) => {
+            setTimeout(() => this.playTone(n, n * 1.05, 0.22, 'triangle', 0.15), idx * 110);
+        });
+    }
+}
+
+const sfx = new SoundFX();
+
+// عناصر واجهة المستخدم
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvasContainer');
+
+const livesDisplay = document.getElementById('livesDisplay');
+const coinsDisplay = document.getElementById('coinsDisplay');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const levelDisplay = document.getElementById('levelDisplay');
+
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const winScreen = document.getElementById('winScreen');
+const finalScoreText = document.getElementById('finalScoreText');
+const winScoreText = document.getElementById('winScoreText');
+
+// أبعاد العالم الافتراضية الثابتة لضمان نفس الفيزياء على جميع الشاشات
+const VIRTUAL_WIDTH = 960;
+const VIRTUAL_HEIGHT = 540;
+
+// ضبط حجم الـ Canvas بشكل متجاوب
+function resizeCanvas() {
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+}
+window.addEventListener('resize', resizeCanvas);
+
+// حالة اللعبة العامة
+const gameState = {
+    status: 'START', // START, PLAYING, GAMEOVER, WIN
+    score: 0,
+    coins: 0,
+    lives: 3,
+    level: 1,
+    cameraX: 0,
+    levelWidth: 3600,
+    gravity: 0.65,
+    frameCount: 0
+};
+
+// مدخلات التحكم
+const keys = {
+    left: false,
+    right: false,
+    jump: false
+};
+
+// كائن اللاعب (ماريو)
+const player = {
+    x: 100,
+    y: 300,
+    width: 38,
+    height: 48,
+    vx: 0,
+    vy: 0,
+    speed: 5.5,
+    jumpPower: -14.2,
+    grounded: false,
+    facing: 1, // 1 لليمين، -1 لليسار
+    invulnerable: 0,
+    animTimer: 0
+};
+
+// مصفوفات عناصر المرحلة
+let platforms = [];
+let enemies = [];
+let coins = [];
+let particles = [];
+let clouds = [];
+let hills = [];
+let goalFlag = { x: 3400, y: 180, width: 14, height: 280 };
+
+/**
+ * بناء وتوليد المرحلة بناءً على رقم المستوى
+ */
+function buildLevel(levelNum) {
+    platforms = [];
+    enemies = [];
+    coins = [];
+    particles = [];
+    clouds = [];
+    hills = [];
+
+    const speedMultiplier = 1 + (levelNum - 1) * 0.22;
+    gameState.levelWidth = 3400 + (levelNum - 1) * 600;
+    const groundY = 460;
+
+    // إعادة ضبط موقع اللاعب
+    player.x = 80;
+    player.y = 320;
+    player.vx = 0;
+    player.vy = 0;
+    player.grounded = false;
+    player.invulnerable = 0;
+    gameState.cameraX = 0;
+
+    // توليد السحب والتلال في الخلفية
+    for (let i = 0; i < gameState.levelWidth; i += 320) {
+        clouds.push({
+            x: i + Math.random() * 120,
+            y: 50 + Math.random() * 110,
+            scale: 0.8 + Math.random() * 0.5
+        });
+        hills.push({
+            x: i + Math.random() * 150,
+            width: 180 + Math.random() * 120,
+            height: 90 + Math.random() * 70
+        });
+    }
+
+    // بناء الأرضية مع وجود حفر (فجوات) للتحدي
+    let currentX = 0;
+    while (currentX < gameState.levelWidth) {
+        const segWidth = 550 + Math.floor(Math.random() * 350);
+        platforms.push({
+            x: currentX,
+            y: groundY,
+            width: segWidth,
+            height: 80,
+            type: 'ground'
+        });
+
+        // إضافة أنابيب خضراء كلاسيكية على الأرضية
+        if (currentX > 350 && currentX < gameState.levelWidth - 500) {
+            const pipeX = currentX + segWidth * 0.55;
+            const pipeH = 65 + (Math.floor(Math.random() * 2) * 25);
+            platforms.push({
+                x: pipeX,
+                y: groundY - pipeH,
+                width: 56,
+                height: pipeH,
+                type: 'pipe'
+            });
+
+            // وضع عملات ذهبية فوق الأنبوب
+            coins.push({ x: pipeX + 14, y: groundY - pipeH - 45, radius: 14, collected: false, bobOffset: Math.random() * 6 });
+            coins.push({ x: pipeX + 14, y: groundY - pipeH - 85, radius: 14, collected: false, bobOffset: Math.random() * 6 });
+        }
+
+        // إضافة شرير يجري على هذه القطعة من الأرض
+        if (currentX > 250 && currentX < gameState.levelWidth - 400) {
+            enemies.push({
+                x: currentX + segWidth * 0.3,
+                y: groundY - 38,
+                width: 38,
+                height: 38,
+                vx: -2.2 * speedMultiplier,
+                vy: 0,
+                minX: currentX + 10,
+                maxX: currentX + segWidth - 48,
+                alive: true,
+                squashTimer: 0,
+                walkFrame: 0
+            });
+        }
+
+        // الانتقال لما بعد الفجوة (حفرة صغيرة)
+        const gapWidth = currentX < gameState.levelWidth - 800 ? (110 + Math.random() * 45) : 0;
+        currentX += segWidth + gapWidth;
+    }
+
+    // ضمان وجود أرضية صلبة عند البداية والنهاية
+    platforms[0].width = Math.max(platforms[0].width, 650);
+    platforms.push({
+        x: gameState.levelWidth - 450,
+        y: groundY,
+        width: 550,
+        height: 80,
+        type: 'ground'
+    });
+
+    // إضافة منصات طوب معلقة في الهواء وعملات ذهبية وأشرار فوقها
+    for (let px = 420; px < gameState.levelWidth - 550; px += 380) {
+        const platY = 270 + (Math.random() > 0.5 ? -45 : 20);
+        const platW = 160 + Math.floor(Math.random() * 3) * 40;
+        platforms.push({
+            x: px,
+            y: platY,
+            width: platW,
+            height: 32,
+            type: 'brick'
+        });
+
+        // صف من العملات الذهبية فوق المنصة
+        const coinCount = Math.floor(platW / 42);
+        for (let c = 0; c < coinCount; c++) {
+            coins.push({
+                x: px + 22 + c * 40,
+                y: platY - 36,
+                radius: 14,
+                collected: false,
+                bobOffset: c * 0.7
+            });
+        }
+
+        // أحياناً نضع شريراً يجري فوق المنصة العلوية
+        if (platW >= 200) {
+            enemies.push({
+                x: px + platW / 2,
+                y: platY - 38,
+                width: 38,
+                height: 38,
+                vx: 1.8 * speedMultiplier,
+                vy: 0,
+                minX: px,
+                maxX: px + platW - 38,
+                alive: true,
+                squashTimer: 0,
+                walkFrame: 0
+            });
+        }
+    }
+
+    // تحديد موقع علم النهاية
+    goalFlag = {
+        x: gameState.levelWidth - 220,
+        y: groundY - 280,
+        width: 14,
+        height: 280
+    };
+
+    updateHUD();
+}
+
+/**
+ * تحديث شريط المعلومات العلوي
+ */
+function updateHUD() {
+    livesDisplay.textContent = gameState.lives;
+    coinsDisplay.textContent = gameState.coins;
+    scoreDisplay.textContent = gameState.score;
+    levelDisplay.textContent = gameState.level;
+}
+
+/**
+ * إنشاء جزيئات بصرية عند جمع عملة أو القضاء على شرير
+ */
+function spawnParticles(x, y, color, count = 10) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x,
+            y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.8) * 8,
+            size: 4 + Math.random() * 5,
+            color,
+            life: 28 + Math.random() * 15
+        });
+    }
+}
+
+/**
+ * فحص التصادم بين مستطيلين (AABB)
+ */
+function checkRectCollision(a, b) {
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+    );
+}
+
+/**
+ * التحديث الفيزيائي ومنطق اللعبة لكل إطار
+ */
+function update() {
+    if (gameState.status !== 'PLAYING') return;
+
+    gameState.frameCount++;
+
+    if (player.invulnerable > 0) {
+        player.invulnerable--;
+    }
+
+    // حركة اللاعب الأفقية
+    if (keys.left) {
+        player.vx = -player.speed;
+        player.facing = -1;
+        player.animTimer++;
+    } else if (keys.right) {
+        player.vx = player.speed;
+        player.facing = 1;
+        player.animTimer++;
+    } else {
+        player.vx *= 0.78;
+        if (Math.abs(player.vx) < 0.2) player.vx = 0;
+        player.animTimer = 0;
+    }
+
+    // القفز
+    if (keys.jump && player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+        sfx.jump();
+    }
+
+    // تطبيق الجاذبية
+    player.vy += gameState.gravity;
+    if (player.vy > 15) player.vy = 15;
+
+    // تحديث الموقع الأفقي وفحص التصادم مع المنصات
+    player.x += player.vx;
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > gameState.levelWidth) {
+        player.x = gameState.levelWidth - player.width;
+    }
+
+    for (const plat of platforms) {
+        if (checkRectCollision(player, plat)) {
+            if (player.vx > 0) {
+                player.x = plat.x - player.width;
+            } else if (player.vx < 0) {
+                player.x = plat.x + plat.width;
+            }
+            player.vx = 0;
+        }
+    }
+
+    // تحديث الموقع العمودي وفحص التصادم مع المنصات
+    player.y += player.vy;
+    player.grounded = false;
+
+    for (const plat of platforms) {
+        if (checkRectCollision(player, plat)) {
+            if (player.vy > 0) {
+                // الهبوط فوق المنصة
+                player.y = plat.y - player.height;
+                player.vy = 0;
+                player.grounded = true;
+            } else if (player.vy < 0) {
+                // الاصطدام برأس اللاعب أسفل المنصة
+                player.y = plat.y + plat.height;
+                player.vy = 0;
+            }
+        }
+    }
+
+    // التحقق من سقوط اللاعب في حفرة
+    if (player.y > VIRTUAL_HEIGHT + 60) {
+        handlePlayerDamage(true);
+        return;
+    }
+
+    // تحديث الكاميرا لتتبع اللاعب بسلاسة
+    const targetCamX = player.x - VIRTUAL_WIDTH * 0.35;
+    gameState.cameraX += (targetCamX - gameState.cameraX) * 0.12;
+    gameState.cameraX = Math.max(0, Math.min(gameState.cameraX, gameState.levelWidth - VIRTUAL_WIDTH));
+
+    // تحديث الأشرار (Goomba-style)
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+
+        if (!enemy.alive) {
+            enemy.squashTimer--;
+            if (enemy.squashTimer <= 0) {
+                enemies.splice(i, 1);
+            }
+            continue;
+        }
+
+        enemy.x += enemy.vx;
+        enemy.walkFrame += 0.15;
+
+        // ارتداد الشرير عند حدود المنصة أو الأنبوب
+        if (enemy.x <= enemy.minX) {
+            enemy.x = enemy.minX;
+            enemy.vx = Math.abs(enemy.vx);
+        } else if (enemy.x >= enemy.maxX) {
+            enemy.x = enemy.maxX;
+            enemy.vx = -Math.abs(enemy.vx);
+        }
+
+        // التصادم مع الأنابيب للأشرار على الأرض
+        for (const plat of platforms) {
+            if (plat.type === 'pipe' && checkRectCollision(enemy, plat)) {
+                enemy.vx = -enemy.vx;
+                enemy.x += enemy.vx * 2;
+            }
+        }
+
+        // فحص التصادم بين اللاعب والشرير
+        if (checkRectCollision(player, enemy)) {
+            // هل اللاعب يسقط من الأعلى فوق رأس الشرير؟
+            const playerBottom = player.y + player.height;
+            const isStomping = player.vy > 0 && (playerBottom - player.vy) <= enemy.y + enemy.height * 0.55;
+
+            if (isStomping) {
+                // القضاء على الشرير!
+                enemy.alive = false;
+                enemy.squashTimer = 18;
+                player.vy = -10.5; // قفزة ارتدادية ممتعة
+                gameState.score += 100;
+                sfx.stomp();
+                spawnParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, '#ff7043', 14);
+                updateHUD();
+            } else if (player.invulnerable === 0) {
+                // الاصطدام الجانبي بالشرير
+                handlePlayerDamage(false);
+            }
+        }
+    }
+
+    // تحديث وفحص جمع العملات الذهبية
+    for (const coin of coins) {
+        if (coin.collected) continue;
+
+        const coinBox = {
+            x: coin.x - coin.radius,
+            y: coin.y - coin.radius,
+            width: coin.radius * 2,
+            height: coin.radius * 2
+        };
+
+        if (checkRectCollision(player, coinBox)) {
+            coin.collected = true;
+            gameState.coins += 1;
+            gameState.score += 50;
+            sfx.coin();
+            spawnParticles(coin.x, coin.y, '#ffd700', 12);
+            updateHUD();
+        }
+    }
+
+    // تحديث الجزيئات
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3;
+        p.life--;
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+
+    // التحقق من الوصول إلى علم الفوز
+    if (checkRectCollision(player, goalFlag)) {
+        gameState.status = 'WIN';
+        gameState.score += 500;
+        updateHUD();
+        sfx.win();
+        winScoreText.textContent = `مجموع نقاطك: ${gameState.score} | العملات الذهبية: ${gameState.coins}`;
+        winScreen.classList.remove('hidden');
+    }
+}
+
+/**
+ * معالجة تعرض اللاعب للضرر أو السقوط
+ */
+function handlePlayerDamage(fellInPit) {
+    sfx.hurt();
+    gameState.lives--;
+    updateHUD();
+
+    if (gameState.lives <= 0) {
+        gameState.status = 'GAMEOVER';
+        finalScoreText.textContent = `لقد حققت ${gameState.score} نقطة وجمعت ${gameState.coins} عملة ذهبية!`;
+        gameOverScreen.classList.remove('hidden');
+    } else if (fellInPit) {
+        // إعادة اللاعب لبداية المرحلة مع الحفاظ على نقاطه
+        player.x = 80;
+        player.y = 250;
+        player.vx = 0;
+        player.vy = 0;
+        player.invulnerable = 90;
+        gameState.cameraX = 0;
+    } else {
+        // حصانة مؤقتة مع ارتداد بسيط
+        player.invulnerable = 90;
+        player.vy = -8;
+        player.vx = -player.facing * 5;
+        spawnParticles(player.x + player.width / 2, player.y + player.height / 2, '#ff1744', 12);
+    }
+}
+
+/**
+ * دوال الرسم على الـ Canvas
+ */
+function draw() {
+    // حساب مقياس الرسم ليتناسب مع حجم الشاشة الفعلي
+    const scaleX = canvas.width / VIRTUAL_WIDTH;
+    const scaleY = canvas.height / VIRTUAL_HEIGHT;
+
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+
+    // 1. رسم السماء بتدرج لوني مشرق
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, VIRTUAL_HEIGHT);
+    skyGrad.addColorStop(0, '#4facfe');
+    skyGrad.addColorStop(1, '#a1c4fd');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+    // 2. رسم التلال البعيدة (Parallax خفيف)
+    for (const hill of hills) {
+        const hx = hill.x - gameState.cameraX * 0.4;
+        if (hx + hill.width < -50 || hx > VIRTUAL_WIDTH + 50) continue;
+        ctx.fillStyle = '#43a047';
+        ctx.beginPath();
+        ctx.moveTo(hx, 460);
+        ctx.quadraticCurveTo(hx + hill.width / 2, 460 - hill.height * 2, hx + hill.width, 460);
+        ctx.fill();
+    }
+
+    // 3. رسم السحب البيضاء
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    for (const cloud of clouds) {
+        const cx = cloud.x - gameState.cameraX * 0.25;
+        if (cx < -150 || cx > VIRTUAL_WIDTH + 150) continue;
+        drawCloud(cx, cloud.y, cloud.scale);
+    }
+
+    // تطبيق إزاحة الكاميرا لعناصر اللعب
+    ctx.save();
+    ctx.translate(-gameState.cameraX, 0);
+
+    // 4. رسم المنصات والأنابيب والأرضية
+    for (const plat of platforms) {
+        if (plat.x + plat.width < gameState.cameraX - 50 || plat.x > gameState.cameraX + VIRTUAL_WIDTH + 50) continue;
+
+        if (plat.type === 'ground') {
+            // التربة البنية
+            ctx.fillStyle = '#8d5524';
+            ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+            // العشب الأخضر العلوي
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(plat.x, plat.y, plat.width, 16);
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillRect(plat.x, plat.y + 14, plat.width, 4);
+        } else if (plat.type === 'brick') {
+            // منصات الطوب الذهبي/البني
+            ctx.fillStyle = '#d84315';
+            ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+            ctx.strokeStyle = '#ffcc80';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
+            // خطوط الطوب
+            for (let bx = plat.x + 32; bx < plat.x + plat.width; bx += 32) {
+                ctx.beginPath();
+                ctx.moveTo(bx, plat.y);
+                ctx.lineTo(bx, plat.y + plat.height);
+                ctx.stroke();
+            }
+        } else if (plat.type === 'pipe') {
+            // جسم الأنبوب الأخضر
+            ctx.fillStyle = '#2e7d32';
+            ctx.fillRect(plat.x + 4, plat.y + 18, plat.width - 8, plat.height - 18);
+            ctx.fillStyle = '#66bb6a';
+            ctx.fillRect(plat.x + 10, plat.y + 18, 10, plat.height - 18);
+            // فوهة الأنبوب العلوية
+            ctx.fillStyle = '#388e3c';
+            ctx.fillRect(plat.x, plat.y, plat.width, 20);
+            ctx.strokeStyle = '#1b5e20';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(plat.x, plat.y, plat.width, 20);
+        }
+    }
+
+    // 5. رسم علم النهاية
+    drawGoalFlag();
+
+    // 6. رسم العملات الذهبية الدوارة
+    for (const coin of coins) {
+        if (coin.collected) continue;
+        if (coin.x < gameState.cameraX - 40 || coin.x > gameState.cameraX + VIRTUAL_WIDTH + 40) continue;
+        drawSpinningCoin(coin);
+    }
+
+    // 7. رسم الأشرار (الوحوش الجارية)
+    for (const enemy of enemies) {
+        if (enemy.x + enemy.width < gameState.cameraX - 50 || enemy.x > gameState.cameraX + VIRTUAL_WIDTH + 50) continue;
+        drawEnemy(enemy);
+    }
+
+    // 8. رسم البطل (ماريو)
+    drawPlayer();
+
+    // 9. رسم الجزيئات المتطايرة
+    for (const p of particles) {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+    ctx.restore();
+}
+
+/**
+ * رسم سحابة كرتونية
+ */
+function drawCloud(x, y, s) {
+    ctx.beginPath();
+    ctx.arc(x, y, 24 * s, 0, Math.PI * 2);
+    ctx.arc(x + 22 * s, y - 10 * s, 28 * s, 0, Math.PI * 2);
+    ctx.arc(x + 48 * s, y, 24 * s, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+/**
+ * رسم العملة الذهبية مع تأثير الدوران والطفو
+ */
+function drawSpinningCoin(coin) {
+    const bobY = Math.sin(gameState.frameCount * 0.08 + coin.bobOffset) * 5;
+    const spinWidth = Math.max(4, Math.abs(Math.cos(gameState.frameCount * 0.09 + coin.bobOffset)) * coin.radius);
+
+    ctx.save();
+    ctx.translate(coin.x, coin.y + bobY);
+
+    // الجسم الذهبي الخارجي
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, spinWidth, coin.radius, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#ff8f00';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // لمعة داخلية
+    if (spinWidth > 7) {
+        ctx.fillStyle = '#fff59d';
+        ctx.fillRect(-2, -coin.radius * 0.45, 4, coin.radius * 0.9);
+    }
+
+    ctx.restore();
+}
+
+/**
+ * رسم الشرير (وحش الفطر الغاضب الجاري)
+ */
+function drawEnemy(enemy) {
+    ctx.save();
+    ctx.translate(enemy.x + enemy.width / 2, enemy.y + enemy.height);
+
+    if (!enemy.alive) {
+        // شكل مسطح عند القضاء عليه
+        ctx.scale(1.25, 0.3);
+    }
+
+    // الأقدام المتحركة أثناء الجري
+    const footOffset = Math.sin(enemy.walkFrame) * 4;
+    ctx.fillStyle = '#212121';
+    ctx.beginPath();
+    ctx.ellipse(-9 + footOffset, -5, 8, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(9 - footOffset, -5, 8, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // الجسم السفلي
+    ctx.fillStyle = '#ffe0b2';
+    ctx.fillRect(-10, -18, 20, 12);
+
+    // قبعة الفطر البنية
+    ctx.fillStyle = '#6d4c41';
+    ctx.beginPath();
+    ctx.arc(0, -18, 19, Math.PI, 0);
+    ctx.lineTo(19, -14);
+    ctx.lineTo(-19, -14);
+    ctx.closePath();
+    ctx.fill();
+
+    // العيون الغاضبة
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-9, -25, 6, 8);
+    ctx.fillRect(3, -25, 6, 8);
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-7, -23, 3, 5);
+    ctx.fillRect(5, -23, 3, 5);
+
+    // الحواجب الغاضبة
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-11, -28);
+    ctx.lineTo(-2, -24);
+    ctx.moveTo(11, -28);
+    ctx.lineTo(2, -24);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+/**
+ * رسم شخصية ماريو
+ */
+function drawPlayer() {
+    // وميض عند الحصانة المؤقتة
+    if (player.invulnerable > 0 && Math.floor(player.invulnerable / 4) % 2 === 0) {
+        return;
+    }
+
+    ctx.save();
+    ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+    ctx.scale(player.facing, 1);
+
+    const w = player.width;
+    const h = player.height;
+    const runSwing = player.grounded ? Math.sin(player.animTimer * 0.35) * 6 : 5;
+
+    // الأرجل / الحذاء
+    ctx.fillStyle = '#4e342e';
+    ctx.fillRect(-12 + runSwing, h / 2 - 8, 11, 8);
+    ctx.fillRect(2 - runSwing, h / 2 - 8, 11, 8);
+
+    // البنطال الأزرق
+    ctx.fillStyle = '#1565c0';
+    ctx.fillRect(-12, 2, 24, 15);
+
+    // القميص الأحمر
+    ctx.fillStyle = '#e53935';
+    ctx.fillRect(-14, -8, 28, 12);
+
+    // أزرار ذهبية
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(-5, 5, 2.5, 0, Math.PI * 2);
+    ctx.arc(6, 5, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // الوجه
+    ctx.fillStyle = '#ffcc80';
+    ctx.fillRect(-11, -20, 22, 13);
+
+    // الأنف والشارب
+    ctx.fillStyle = '#ffb74d';
+    ctx.fillRect(9, -15, 6, 5);
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(3, -11, 10, 3);
+
+    // العين
+    ctx.fillStyle = '#000';
+    ctx.fillRect(4, -18, 3, 5);
+
+    // القبعة الحمراء المميزة
+    ctx.fillStyle = '#d32f2f';
+    ctx.fillRect(-13, -25, 26, 6);
+    ctx.fillRect(-8, -28, 18, 4);
+    // حافة القبعة للأمام
+    ctx.fillRect(4, -22, 13, 3);
+
+    ctx.restore();
+}
+
+/**
+ * رسم علم النهاية
+ */
+function drawGoalFlag() {
+    // قاعدة حجرية
+    ctx.fillStyle = '#757575';
+    ctx.fillRect(goalFlag.x - 14, goalFlag.y + goalFlag.height - 20, 42, 20);
+
+    // السارية البيضاء
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(goalFlag.x + 4, goalFlag.y, 6, goalFlag.height - 20);
+
+    // كرة ذهبية في الأعلى
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(goalFlag.x + 7, goalFlag.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // العلم الأخضر المرفرف
+    const wave = Math.sin(gameState.frameCount * 0.1) * 4;
+    ctx.fillStyle = '#00e676';
+    ctx.beginPath();
+    ctx.moveTo(goalFlag.x + 4, goalFlag.y + 12);
+    ctx.lineTo(goalFlag.x - 65, goalFlag.y + 32 + wave);
+    ctx.lineTo(goalFlag.x + 4, goalFlag.y + 52);
+    ctx.closePath();
+    ctx.fill();
+}
+
+/**
+ * حلقة الرسم الرئيسية (60 إطار في الثانية)
+ */
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+/**
+ * إعداد أحداث لوحة المفاتيح والأزرار اللمسية
+ */
+function setupControls() {
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+            keys.jump = true;
+            if (gameState.status === 'PLAYING') e.preventDefault();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.jump = false;
+    });
+
+    // ربط أزرار الشاشة اللمسية والفأرة
+    const bindTouchButton = (btnId, keyName) => {
+        const btn = document.getElementById(btnId);
+        const startPress = (e) => {
+            e.preventDefault();
+            sfx.init();
+            keys[keyName] = true;
+            btn.classList.add('pressed');
+        };
+        const endPress = (e) => {
+            e.preventDefault();
+            keys[keyName] = false;
+            btn.classList.remove('pressed');
+        };
+
+        btn.addEventListener('touchstart', startPress, { passive: false });
+        btn.addEventListener('touchend', endPress, { passive: false });
+        btn.addEventListener('touchcancel', endPress, { passive: false });
+        btn.addEventListener('mousedown', startPress);
+        btn.addEventListener('mouseup', endPress);
+        btn.addEventListener('mouseleave', endPress);
+    };
+
+    bindTouchButton('btnLeft', 'left');
+    bindTouchButton('btnRight', 'right');
+    bindTouchButton('btnJump', 'jump');
+
+    // زر كتم/تفعيل الصوت
+    const soundBtn = document.getElementById('soundToggleBtn');
+    soundBtn.addEventListener('click', () => {
+        sfx.muted = !sfx.muted;
+        soundBtn.textContent = sfx.muted ? '🔇 صامت' : '🔊 الصوت';
+    });
+
+    // أزرار الشاشات (ابدأ، إعادة المحاولة، المرحلة التالية)
+    document.getElementById('startBtn').addEventListener('click', () => {
+        sfx.init();
+        startScreen.classList.add('hidden');
+        gameState.score = 0;
+        gameState.coins = 0;
+        gameState.lives = 3;
+        gameState.level = 1;
+        buildLevel(1);
+        gameState.status = 'PLAYING';
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+        sfx.init();
+        gameOverScreen.classList.add('hidden');
+        gameState.score = 0;
+        gameState.coins = 0;
+        gameState.lives = 3;
+        gameState.level = 1;
+        buildLevel(1);
+        gameState.status = 'PLAYING';
+    });
+
+    document.getElementById('nextLevelBtn').addEventListener('click', () => {
+        sfx.init();
+        winScreen.classList.add('hidden');
+        gameState.level++;
+        buildLevel(gameState.level);
+        gameState.status = 'PLAYING';
+    });
+}
+
+// تهيئة اللعبة عند اكتمال تحميل الصفحة
+window.onload = function () {
+    resizeCanvas();
+    setupControls();
+    buildLevel(1);
+    gameLoop();
+};
+</script>
+</body>
+</html>
